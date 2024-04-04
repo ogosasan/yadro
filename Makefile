@@ -1,6 +1,6 @@
 
 build:
-	go build -o myapp main.go
+	go build -o xkcd main.go
 
 run:
-	myapp -s "i'll follow you as long as you are following me"
+	xkcd -n 100
