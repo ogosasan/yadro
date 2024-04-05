@@ -17,5 +17,4 @@ func main() {
 	baseURL := c.Url + "/%d/info.0.json"
 	comicsMap := comics.GoToSite(numComics, baseURL)
 	comics.WriteFile(screen, c.Bd, comicsMap)
-
 }
