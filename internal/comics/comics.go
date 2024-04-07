@@ -3,9 +3,9 @@ package comics
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -14,14 +14,38 @@ type GistRequest struct {
 	Img     string `json:"img"`
 }
 
-func GoToSite(numComics int, baseURL string) map[int]GistRequest {
-	comicsMap := make(map[int]GistRequest)
+type Write struct {
+	Tscript []string `json:"keywords"`
+	Img     string   `json:"url"`
+}
+
+type InfoResponse struct {
+	Num int `json:"num"`
+}
+
+func GetNumComics(url string) (int, error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return 0, err
+	}
+	defer response.Body.Close()
+
+	var info InfoResponse
+	err = json.NewDecoder(response.Body).Decode(&info)
+	if err != nil {
+		return 0, err
+	}
+
+	return info.Num, nil
+}
+
+func GoToSite(numComics int, baseURL string) map[int]Write {
+	comicsMap := make(map[int]Write)
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-
+	wg.Add(numComics)
 	for i := 1; i <= numComics; i++ {
-		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
 
@@ -34,28 +58,24 @@ func GoToSite(numComics int, baseURL string) map[int]GistRequest {
 			}
 			if response.StatusCode != http.StatusOK {
 				fmt.Printf("%s not found", url)
+				fmt.Println(i)
 				return
 			}
 
 			defer response.Body.Close()
 
-			body, err := io.ReadAll(response.Body)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
 			var xkcd GistRequest
-			err = json.Unmarshal(body, &xkcd)
+			err = json.NewDecoder(response.Body).Decode(&xkcd)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 
 			xkcd.Tscript = normalization(xkcd.Tscript)
+			print := Write{Tscript: strings.Fields(xkcd.Tscript), Img: xkcd.Img}
 
 			mu.Lock()
-			comicsMap[i] = xkcd
+			comicsMap[i] = print
 			mu.Unlock()
 		}(i)
 	}
@@ -64,15 +84,28 @@ func GoToSite(numComics int, baseURL string) map[int]GistRequest {
 	return comicsMap
 }
 
-func WriteFile(screen bool, file string, comicsMap map[int]GistRequest) {
+func WriteFile(screen bool, num int, file string, comicsMap map[int]Write) {
 	f, err := os.Create(file)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	count := 0
 	if screen {
-		bytes, _ := json.MarshalIndent(comicsMap, "", "\t")
-		fmt.Println(string(bytes))
+		if num == -1 {
+			bytes, _ := json.MarshalIndent(comicsMap, "", "\t")
+			fmt.Println(string(bytes))
+		} else {
+			for _, gist := range comicsMap {
+				if count >= num {
+					break
+				}
+				bytes, _ := json.MarshalIndent(gist, "", "\t")
+				fmt.Printf("%d:\n", count+1)
+				fmt.Println(string(bytes))
+				count++
+			}
+		}
 	}
 	defer f.Close()
 	encoder := json.NewEncoder(f)
