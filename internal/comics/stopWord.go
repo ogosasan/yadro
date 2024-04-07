@@ -1,8 +1,12 @@
 package comics
 
-func IsStopWord(word string) bool {
-	switch word {
-	case "a", "about", "above", "after", "again", "against", "all", "am", "an",
+var stopwords map[string]bool
+
+func init() {
+	stopwords = make(map[string]bool)
+
+	stopWordsList := []string{
+		"a", "about", "above", "after", "again", "against", "all", "am", "an",
 		"and", "any", "are", "as", "at", "be", "because", "been", "before",
 		"being", "below", "between", "both", "but", "by", "can", "did", "do",
 		"does", "doing", "don", "down", "during", "each", "few", "for", "from",
@@ -22,8 +26,14 @@ func IsStopWord(word string) bool {
 		"there's", "there'll", "there'd", "isn't", "aren't", "don't", "doesn't", "wasn't",
 		"weren't", "didn't", "haven't", "hasn't", "won't", "hadn't", "can't", "couldn't",
 		"mustn't", "mightn't", "needn't", "shouldn't", "oughtn't", "wouldn't",
-		"what's", "how's", "where's":
-		return true
+		"what's", "how's", "where's", "we'r",
 	}
-	return false
+
+	for _, word := range stopWordsList {
+		stopwords[word] = true
+	}
+}
+
+func IsStopWord(word string) bool {
+	return stopwords[word]
 }
