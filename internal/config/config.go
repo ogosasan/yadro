@@ -11,9 +11,9 @@ type Conf struct {
 	Bd  string `yaml:"db_file"`
 }
 
-func (c *Conf) GetConf() *Conf {
+func (c *Conf) GetConf(path string) *Conf {
 
-	yamlFile, err := os.ReadFile("configs/config.yaml")
+	yamlFile, err := os.ReadFile(path)
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}

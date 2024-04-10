@@ -1,6 +1,6 @@
 
 build:
-	go build -o xkcd main.go
+	go build -o xkcd yadro/cmd/xkcd/
 
 run:
-	xkcd -n 100
+	xkcd -c configs/config.yaml
