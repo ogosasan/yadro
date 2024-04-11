@@ -29,7 +29,7 @@ func main() {
 		fmt.Println("Failed to get number of comics:", err)
 		return
 	}
-	comicsMap := comics.GoToSite(numComics, baseURL, done, fileExist)
+	comicsMap := comics.GoToSite(numComics, baseURL, done, fileExist, c.Goroutines)
 	select {
 	case <-signalChan:
 		fmt.Println("The signal is interrupted.")

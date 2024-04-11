@@ -7,8 +7,9 @@ import (
 )
 
 type Conf struct {
-	Url string `yaml:"source_url"`
-	Bd  string `yaml:"db_file"`
+	Url        string `yaml:"source_url"`
+	Bd         string `yaml:"db_file"`
+	Goroutines int    `yaml:"parallel"`
 }
 
 func (c *Conf) GetConf(path string) *Conf {
