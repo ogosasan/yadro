@@ -7,7 +7,7 @@ import (
 	"unicode"
 )
 
-func normalization(sentence string) string {
+func normalization(sentence string) []string {
 	f := func(c rune) bool {
 		return !unicode.IsLetter(c) && !unicode.IsNumber(c) && string(c) != "'"
 	}
@@ -27,5 +27,5 @@ func normalization(sentence string) string {
 			}
 		}
 	}
-	return strings.Join(res, " ")
+	return res
 }
