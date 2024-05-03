@@ -10,6 +10,7 @@ type Conf struct {
 	Url        string `yaml:"source_url"`
 	Bd         string `yaml:"db_file"`
 	Goroutines int    `yaml:"parallel"`
+	Port       string `yaml:"port"`
 }
 
 func (c *Conf) GetConf(path string) *Conf {

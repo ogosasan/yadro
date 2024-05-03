@@ -10,7 +10,7 @@ type kv struct {
 	Value int
 }
 
-func IndexSearch(indexMap map[string][]int, comicsMap map[int]Write, line string) {
+func IndexSearch(indexMap map[string][]int, comicsMap map[int]Write, line string) []string {
 	searchMap := make(map[int]int)
 	words := normalization(line)
 	for i := 0; i < len(words); i++ {
@@ -20,7 +20,9 @@ func IndexSearch(indexMap map[string][]int, comicsMap map[int]Write, line string
 			}
 		}
 	}
-	PrintUrl(searchMap, comicsMap)
+	var ans []string
+	ans = PrintUrl(searchMap, comicsMap)
+	return ans
 }
 
 func Search(comicsMap map[int]Write, str string) {
@@ -40,8 +42,9 @@ func Search(comicsMap map[int]Write, str string) {
 	PrintUrl(wordsmap, comicsMap)
 }
 
-func PrintUrl(ansortMap map[int]int, comicsMap map[int]Write) {
+func PrintUrl(ansortMap map[int]int, comicsMap map[int]Write) []string {
 	var ss []kv
+	var ans []string
 	for k, v := range ansortMap {
 		ss = append(ss, kv{k, v})
 	}
@@ -51,10 +54,12 @@ func PrintUrl(ansortMap map[int]int, comicsMap map[int]Write) {
 	})
 	count := 0
 	for _, kv := range ss {
+		ans = append(ans, comicsMap[kv.Key].Img)
 		fmt.Println(comicsMap[kv.Key].Img)
 		count++
 		if count >= 10 {
 			break
 		}
 	}
+	return ans
 }

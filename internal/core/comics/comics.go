@@ -43,7 +43,7 @@ func GetNumComics(baseUrl string) int {
 	return i
 }
 
-func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool, workers int) (map[int]Write, map[string][]int) {
+func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool, workers int) (map[int]Write, map[string][]int, int) {
 	existComics := make(map[int]Write)
 	if fileExist {
 		data, err := ioutil.ReadFile("database.json")
@@ -120,7 +120,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 			indexMap[value.Tscript[j]] = append(indexMap[value.Tscript[j]], key)
 		}
 	}
-	return comicsMap, indexMap
+	return comicsMap, indexMap, len(existComics)
 }
 
 func WriteFile(file string, comicsMap map[int]Write, indexMap map[string][]int) {
