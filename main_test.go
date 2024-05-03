@@ -1,25 +1,22 @@
-package нфвкщ
+package main
 
 import (
-	"flag"
 	"os"
 	"os/signal"
 	"syscall"
 	"testing"
-	"yadro/internal/comics"
-	"yadro/internal/config"
+	comics2 "yadro/internal/core/comics"
+	"yadro/internal/core/config"
 )
 
 var (
 	c         config.Conf
-	comicsMap map[int]comics.Write
+	comicsMap map[int]comics2.Write
 	indexMap  map[string][]int
 	str       string
 )
 
 func setup() {
-	flag.StringVar(&str, "s", "default", "a string var")
-	flag.Parse()
 	c.GetConf("configs/config.yaml")
 
 	var fileExist bool
@@ -31,8 +28,8 @@ func setup() {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	baseURL := c.Url + "/%d/info.0.json"
-	numComics := comics.GetNumComics(baseURL)
-	comicsMap, indexMap = comics.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
+	numComics := comics2.GetNumComics(baseURL)
+	comicsMap, indexMap, _ = comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
 	<-signalChan
 }
 
@@ -41,7 +38,7 @@ func BenchmarkIndexSearch(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		comics.IndexSearch(indexMap, comicsMap, str)
+		comics2.IndexSearch(indexMap, comicsMap, str)
 	}
 }
 
@@ -50,6 +47,6 @@ func BenchmarkSearch(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		comics.Search(comicsMap, str)
+		comics2.Search(comicsMap, str)
 	}
 }

@@ -1,4 +1,4 @@
-package main
+package http
 
 import (
 	"encoding/json"
@@ -8,11 +8,11 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
-	"yadro/internal/comics"
-	"yadro/internal/config"
+	comics2 "yadro/internal/core/comics"
+	"yadro/internal/core/config"
 )
 
-var comicsMap = map[int]comics.Write{}
+var comicsMap = map[int]comics2.Write{}
 var indexMap = map[string][]int{}
 
 func Update(w http.ResponseWriter, r *http.Request) {
@@ -30,13 +30,13 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	baseURL := c.Url + "/%d/info.0.json"
-	numComics := comics.GetNumComics(baseURL)
+	numComics := comics2.GetNumComics(baseURL)
 	var count int
-	comicsMap, indexMap, count = comics.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
+	comicsMap, indexMap, count = comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
 	<-signalChan
 	resp["total comics"] = strconv.Itoa(numComics)
 	resp["new comics"] = strconv.Itoa(numComics - count)
-	comics.WriteFile(c.Bd, comicsMap, indexMap)
+	comics2.WriteFile(c.Bd, comicsMap, indexMap)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	resp["message"] = "Status OK"
@@ -50,7 +50,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 
 func Pics(w http.ResponseWriter, r *http.Request) {
 	line := r.URL.Query().Get("search")
-	ans := comics.IndexSearch(indexMap, comicsMap, line)
+	ans := comics2.IndexSearch(indexMap, comicsMap, line)
 	w.Header().Set("Content-Type", "application/json")
 	resp := make(map[string]string)
 	resp["message"] = "Status Created"

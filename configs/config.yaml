@@ -1,3 +1,4 @@
 source_url: https://xkcd.com
 db_file: database.json
-parallel: 6   #количество ядер устройства
+parallel: 6 #количество ядер устройства
+port: :4000

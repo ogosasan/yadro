@@ -1,6 +1,6 @@
 
 build:
-	go build -o xkcd yadro/cmd/xkcd/
+	go build -o xkcd-server yadro/cmd/xkcd/
 
 run:
-	xkcd -c configs/config.yaml -s "I'm following your questions"
+	xkcd-server
