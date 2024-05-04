@@ -12,8 +12,8 @@ func main() {
 	var c config.Conf
 	c.GetConf("configs/config.yaml")
 	mux := http.NewServeMux()
-	mux.HandleFunc("/update", http2.Update)
-	mux.HandleFunc("/pics", http2.Pics)
+	mux.HandleFunc("POST /update", http2.Update)
+	mux.HandleFunc("GET /pics", http2.Pics)
 	go func() {
 		log.Printf("Starting the server on http://%s", c.Port)
 		err := http.ListenAndServe(c.Port, mux)
