@@ -115,6 +115,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 		close(results)
 		close(done)
 	}()
+	wg.Wait()
 	for key, value := range comicsMap {
 		for j := 0; j < len(value.Tscript); j++ {
 			indexMap[value.Tscript[j]] = append(indexMap[value.Tscript[j]], key)

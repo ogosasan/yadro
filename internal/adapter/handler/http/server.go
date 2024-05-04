@@ -16,10 +16,7 @@ var comicsMap = map[int]comics2.Write{}
 var indexMap = map[string][]int{}
 
 func Update(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/update" {
-		http.NotFound(w, r)
-		return
-	}
+	log.Println("Update...")
 	var c config.Conf
 	c.GetConf("configs/config.yaml")
 	var fileExist bool
@@ -45,10 +42,12 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
 	}
 	w.Write(jsonResp)
+	log.Println("The update is finished.")
 	return
 }
 
 func Pics(w http.ResponseWriter, r *http.Request) {
+	log.Println("Search...")
 	line := r.URL.Query().Get("search")
 	ans := comics2.IndexSearch(indexMap, comicsMap, line)
 	w.Header().Set("Content-Type", "application/json")
