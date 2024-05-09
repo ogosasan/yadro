@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -43,7 +44,7 @@ func GetNumComics(baseUrl string) int {
 	return i
 }
 
-func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool, workers int) (map[int]Write, map[string][]int, int) {
+func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool, workers int) (map[int]Write, map[string][]string, int) {
 	existComics := make(map[int]Write)
 	if fileExist {
 		data, err := ioutil.ReadFile("database.json")
@@ -57,7 +58,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 	}
 
 	comicsMap := make(map[int]Write)
-	indexMap := make(map[string][]int)
+	indexMap := make(map[string][]string)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	jobs := make(chan int, numComics)
@@ -118,7 +119,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 	wg.Wait()
 	for key, value := range comicsMap {
 		for j := 0; j < len(value.Tscript); j++ {
-			indexMap[value.Tscript[j]] = append(indexMap[value.Tscript[j]], key)
+			indexMap[value.Tscript[j]] = append(indexMap[value.Tscript[j]], strconv.Itoa(key))
 		}
 	}
 	return comicsMap, indexMap, len(existComics)

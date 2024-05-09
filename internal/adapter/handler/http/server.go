@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"yadro/internal/adapter/repository"
 	comics2 "yadro/internal/core/comics"
 	"yadro/internal/core/config"
 )
 
-var comicsMap = map[int]comics2.Write{}
-var indexMap = map[string][]int{}
+var db_path string
 
 func Update(w http.ResponseWriter, r *http.Request) {
 	log.Println("Update...")
@@ -28,12 +28,13 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	baseURL := c.Url + "/%d/info.0.json"
 	numComics := comics2.GetNumComics(baseURL)
-	var count int
-	comicsMap, indexMap, count = comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
+	comicsMap, indexMap, count := comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
 	<-signalChan
+	db_path = c.Dsn
+	repository.Head(db_path, comicsMap, indexMap)
 	resp["total comics"] = strconv.Itoa(numComics)
 	resp["new comics"] = strconv.Itoa(numComics - count)
-	comics2.WriteFile(c.Bd, comicsMap, indexMap)
+	//comics2.WriteFile(c.Bd, comicsMap, indexMap)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	resp["message"] = "Status OK"
@@ -48,6 +49,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 
 func Pics(w http.ResponseWriter, r *http.Request) {
 	log.Println("Search...")
+	comicsMap, indexMap := repository.FetchRecords(db_path)
 	line := r.URL.Query().Get("search")
 	ans := comics2.IndexSearch(indexMap, comicsMap, line)
 	w.Header().Set("Content-Type", "application/json")
@@ -59,4 +61,9 @@ func Pics(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(jsonResp)
 	return
+}
+
+func Delete(w http.ResponseWriter, r *http.Request) {
+	repository.Down(db_path)
+	log.Println("Tables have been deleted.")
 }
