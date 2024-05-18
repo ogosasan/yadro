@@ -8,7 +8,7 @@ import (
 
 func UpdateEveryDay(port string) {
 	time.Sleep(1 * time.Second)
-	url := "http://" + port + "/update"
+	url := "http://" + port + "/update?auto='true'"
 	up, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("Request execution error: %v", err)

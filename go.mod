@@ -3,13 +3,19 @@ module yadro
 go 1.21
 
 require (
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/golang-migrate/migrate/v4 v4.17.1
 	github.com/kljensen/snowball v0.9.0
+	github.com/korovkin/limiter v0.0.0-20230307205149-3d4b2b34c99d
 	github.com/mattn/go-sqlite3 v1.14.22
+	golang.org/x/time v0.3.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

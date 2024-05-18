@@ -124,33 +124,3 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 	}
 	return comicsMap, indexMap, len(existComics)
 }
-
-func WriteFile(file string, comicsMap map[int]Write, indexMap map[string][]int) {
-	f, err := os.Create(file)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "\t")
-	err = encoder.Encode(comicsMap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	index, err := os.Create("index.json")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer index.Close()
-	encode := json.NewEncoder(index)
-	encode.SetIndent("", "\t")
-	err = encode.Encode(indexMap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-}
