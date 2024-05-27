@@ -1,3 +1,7 @@
 source_url: https://xkcd.com
-db_file: database.json
-parallel: 6   #количество ядер устройства
+parallel: 6 #количество ядер устройства
+port: localhost:4000
+dsn: database.db
+concurrency_limit: 5
+rate_limit: 10
+token_max_time: 5

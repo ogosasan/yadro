@@ -1,40 +1,25 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-	"yadro/internal/comics"
-	"yadro/internal/config"
+	"log"
+	"net/http"
+	http2 "yadro/internal/adapter/handler/http"
+	"yadro/internal/core/config"
+	"yadro/internal/core/update"
 )
 
 func main() {
-	var confPath string
-	flag.StringVar(&confPath, "c", "default", "a string var")
-	flag.Parse()
 	var c config.Conf
-	c.GetConf(confPath)
-	var fileExist bool
-	if _, err := os.Stat("database.json"); err == nil {
-		fileExist = true
-	}
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	done := make(chan struct{})
-	baseURL := c.Url + "/%d/info.0.json"
-	numComics, err := comics.GetNumComics(c.Url + "/info.0.json")
-	if err != nil {
-		fmt.Println("Failed to get number of comics:", err)
-		return
-	}
-	comicsMap := comics.GoToSite(numComics, baseURL, done, fileExist, c.Goroutines)
-	select {
-	case <-signalChan:
-		fmt.Println("The signal is interrupted.")
-	case <-done:
-		fmt.Println("All comics fetched.")
-	}
-	comics.WriteFile(c.Bd, comicsMap)
+	c.GetConf("configs/config.yaml")
+	mux := http.NewServeMux()
+	mux.HandleFunc("/update", http2.Update)
+	mux.HandleFunc("/pics", http2.Pics)
+	mux.HandleFunc("/delete", http2.Delete)
+	mux.HandleFunc("/login", http2.Login)
+	go func() {
+		log.Printf("Starting the server on http://%s", c.Port)
+		err := http.ListenAndServe(c.Port, mux)
+		log.Fatal(err)
+	}()
+	update.UpdateEveryDay(c.Port)
 }
