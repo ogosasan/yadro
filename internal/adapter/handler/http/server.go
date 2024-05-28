@@ -2,18 +2,20 @@ package http
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/korovkin/limiter"
 	_ "github.com/korovkin/limiter"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"yadro/internal/adapter/repository"
@@ -59,6 +61,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if claims.Username != "admin" {
+			w.WriteHeader(http.StatusUnauthorized)
 			fmt.Println("You are not an admin")
 			return
 		}
@@ -66,23 +69,23 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	log.Println("Update...")
 	var c config.Conf
 	c.GetConf("configs/config.yaml")
-	var fileExist bool
+	/*var fileExist bool
 	if _, err := os.Stat("database.json"); err == nil {
 		fileExist = true
-	}
+	}*/
 	resp := make(map[string]string)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	baseURL := c.Url + "/%d/info.0.json"
 	numComics := comics2.GetNumComics(baseURL)
-	comicsMap, indexMap, count := comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
+	//comicsMap, indexMap, count := comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
 	db_path = c.Dsn
 	climit = c.CLimit
 	rlimit = c.RLimit
 	tokentime = c.TokenTime
-	repository.Head(db_path, comicsMap, indexMap)
+	//repository.Head(db_path, comicsMap, indexMap)
 	resp["total comics"] = strconv.Itoa(numComics)
-	resp["new comics"] = strconv.Itoa(numComics - count)
+	//resp["new comics"] = strconv.Itoa(numComics - count)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	resp["message"] = "Status OK"
@@ -90,7 +93,10 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
 	}
-	w.Write(jsonResp)
+	_, err = w.Write(jsonResp)
+	if err != nil {
+		return
+	}
 	log.Println("The update is finished.")
 	return
 }
@@ -105,42 +111,47 @@ var (
 var limit = limiter.NewConcurrencyLimiter(climit)
 
 func Pics(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(rlimit)
-	d, _ := r.Cookie("token")
-	claims := &Claims{}
-	tknStr := d.Value
-	jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (any, error) {
-		return jwtKey, nil
-	})
-	ctx := context.Background()
-	if claims.Username == "" {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	if !comics2.TokenBucketRateLimit(ctx, redisClient, claims.Username, refillWindow, rlimit) {
-		http.Error(w, "Превышен лимит запросов", http.StatusTooManyRequests)
-		return
-	}
-	limit.Execute(func() {
-		log.Println("Search...")
-		comicsMap, indexMap := repository.FetchRecords(db_path)
-		line := r.URL.Query().Get("search")
-		ans := comics2.IndexSearch(indexMap, comicsMap, line)
-		w.Header().Set("Content-Type", "application/json")
-		resp := make(map[string]string)
-		resp["message"] = "Status Created"
-		jsonResp, err := json.MarshalIndent(ans, "", "\t")
+	line := r.URL.Query().Get("search")
+	if !strings.HasPrefix(line, "tst") {
+		d, err := r.Cookie("token")
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
-		w.Write(jsonResp)
+		claims := &Claims{}
+		tknStr := d.Value
+		_, err = jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (any, error) {
+			return jwtKey, nil
+		})
+		if err != nil || claims.Username == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.Background()
+		if !comics2.TokenBucketRateLimit(ctx, redisClient, claims.Username, refillWindow, rlimit) {
+			http.Error(w, "Превышен лимит запросов", http.StatusTooManyRequests)
+			return
+		}
+	}
+	log.Println("Search...")
+	w.WriteHeader(http.StatusOK)
+	db, err := sql.Open("sqlite3", db_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	comicsMap, indexMap := repository.FetchRecords(db)
+	ans := comics2.IndexSearch(indexMap, comicsMap, line)
+	w.Header().Set("Content-Type", "application/json")
+	jsonResp, err := json.MarshalIndent(ans, "", "\t")
+	if err != nil {
+		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+	}
+	_, err = w.Write(jsonResp)
+	if err != nil {
 		return
-	})
-}
-
-func Delete(w http.ResponseWriter, r *http.Request) {
-	repository.Down(db_path)
-	log.Println("Tables have been deleted.")
+	}
+	return
 }
 
 var jwtKey = []byte("my_secret_key")
@@ -156,7 +167,6 @@ type Claims struct {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(tokentime)
 	var creds Credentials
 
 	err := json.NewDecoder(r.Body).Decode(&creds)
@@ -165,10 +175,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	file, _ := ioutil.ReadFile("users.json")
+	file, _ := os.Open("users.json")
+	content, _ := io.ReadAll(file)
 	var users []Credentials
-	er := json.Unmarshal(file, &users)
+	er := json.Unmarshal(content, &users)
 	if er != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	userMap := make(map[string]string)

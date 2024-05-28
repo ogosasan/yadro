@@ -14,7 +14,6 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update", http2.Update)
 	mux.HandleFunc("/pics", http2.Pics)
-	mux.HandleFunc("/delete", http2.Delete)
 	mux.HandleFunc("/login", http2.Login)
 	go func() {
 		log.Printf("Starting the server on http://%s", c.Port)

@@ -12,7 +12,9 @@ import (
 
 type GistRequest struct {
 	Tscript string `json:"transcript"`
+	Alt     string `json:"alt"`
 	Img     string `json:"img"`
+	Title   string `json:"title"`
 }
 
 type Write struct {
@@ -84,7 +86,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 				fmt.Println(err)
 				continue
 			}
-			printInFile := Write{Tscript: normalization(xkcd.Tscript), Img: xkcd.Img}
+			printInFile := Write{Tscript: Normalization(xkcd.Tscript + xkcd.Alt + xkcd.Title), Img: xkcd.Img}
 			results <- printInFile
 			response.Body.Close()
 		}

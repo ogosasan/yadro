@@ -12,7 +12,7 @@ type kv struct {
 
 func IndexSearch(indexMap map[string][]int, comicsMap map[int]Write, line string) []string {
 	searchMap := make(map[int]int)
-	words := normalization(line)
+	words := Normalization(line)
 	for i := 0; i < len(words); i++ {
 		if indexMap[words[i]] != nil {
 			for j := 0; j < len(indexMap[words[i]]); j++ {
@@ -20,32 +20,15 @@ func IndexSearch(indexMap map[string][]int, comicsMap map[int]Write, line string
 			}
 		}
 	}
-	var ans []string
-	ans = PrintUrl(searchMap, comicsMap)
+	//var ans []string
+	ans := PrintUrl(searchMap, comicsMap)
 	return ans
 }
 
-func Search(comicsMap map[int]Write, str string) {
-	wordsmap := make(map[int]int)
-	words := normalization(str)
-	for key, value := range comicsMap {
-		for i := 0; i < len(value.Tscript); i++ {
-			for j := 0; j < len(words); j++ {
-				if value.Tscript[i] == words[j] {
-					wordsmap[key]++
-				}
-			}
-			{
-			}
-		}
-	}
-	PrintUrl(wordsmap, comicsMap)
-}
-
-func PrintUrl(ansortMap map[int]int, comicsMap map[int]Write) []string {
+func PrintUrl(unsortedMap map[int]int, comicsMap map[int]Write) []string {
 	var ss []kv
 	var ans []string
-	for k, v := range ansortMap {
+	for k, v := range unsortedMap {
 		ss = append(ss, kv{k, v})
 	}
 
@@ -56,6 +39,7 @@ func PrintUrl(ansortMap map[int]int, comicsMap map[int]Write) []string {
 	for _, kv := range ss {
 		ans = append(ans, comicsMap[kv.Key].Img)
 		fmt.Println(comicsMap[kv.Key].Img)
+		//fmt.Println(kv.Key)
 		count++
 		if count >= 10 {
 			break
