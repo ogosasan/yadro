@@ -69,23 +69,23 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	log.Println("Update...")
 	var c config.Conf
 	c.GetConf("configs/config.yaml")
-	/*var fileExist bool
+	var fileExist bool
 	if _, err := os.Stat("database.json"); err == nil {
 		fileExist = true
-	}*/
+	}
 	resp := make(map[string]string)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	baseURL := c.Url + "/%d/info.0.json"
 	numComics := comics2.GetNumComics(baseURL)
-	//comicsMap, indexMap, count := comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
+	comicsMap, indexMap, count := comics2.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
 	db_path = c.Dsn
 	climit = c.CLimit
 	rlimit = c.RLimit
 	tokentime = c.TokenTime
-	//repository.Head(db_path, comicsMap, indexMap)
+	repository.Head(db_path, comicsMap, indexMap)
 	resp["total comics"] = strconv.Itoa(numComics)
-	//resp["new comics"] = strconv.Itoa(numComics - count)
+	resp["new comics"] = strconv.Itoa(numComics - count)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	resp["message"] = "Status OK"
