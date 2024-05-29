@@ -6,12 +6,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 )
 
 type GistRequest struct {
 	Tscript string `json:"transcript"`
+	Alt     string `json:"alt"`
 	Img     string `json:"img"`
+	Title   string `json:"title"`
 }
 
 type Write struct {
@@ -43,7 +46,7 @@ func GetNumComics(baseUrl string) int {
 	return i
 }
 
-func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool, workers int) (map[int]Write, map[string][]int) {
+func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool, workers int) (map[int]Write, map[string][]string, int) {
 	existComics := make(map[int]Write)
 	if fileExist {
 		data, err := ioutil.ReadFile("database.json")
@@ -57,7 +60,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 	}
 
 	comicsMap := make(map[int]Write)
-	indexMap := make(map[string][]int)
+	indexMap := make(map[string][]string)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	jobs := make(chan int, numComics)
@@ -83,7 +86,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 				fmt.Println(err)
 				continue
 			}
-			printInFile := Write{Tscript: normalization(xkcd.Tscript), Img: xkcd.Img}
+			printInFile := Write{Tscript: Normalization(xkcd.Tscript + xkcd.Alt + xkcd.Title), Img: xkcd.Img}
 			results <- printInFile
 			response.Body.Close()
 		}
@@ -115,40 +118,11 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 		close(results)
 		close(done)
 	}()
+	wg.Wait()
 	for key, value := range comicsMap {
 		for j := 0; j < len(value.Tscript); j++ {
-			indexMap[value.Tscript[j]] = append(indexMap[value.Tscript[j]], key)
+			indexMap[value.Tscript[j]] = append(indexMap[value.Tscript[j]], strconv.Itoa(key))
 		}
 	}
-	return comicsMap, indexMap
-}
-
-func WriteFile(file string, comicsMap map[int]Write, indexMap map[string][]int) {
-	f, err := os.Create(file)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "\t")
-	err = encoder.Encode(comicsMap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	index, err := os.Create("index.json")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer index.Close()
-	encode := json.NewEncoder(index)
-	encode.SetIndent("", "\t")
-	err = encode.Encode(indexMap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	return comicsMap, indexMap, len(existComics)
 }

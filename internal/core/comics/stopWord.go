@@ -26,7 +26,7 @@ func init() {
 		"there's", "there'll", "there'd", "isn't", "aren't", "don't", "doesn't", "wasn't",
 		"weren't", "didn't", "haven't", "hasn't", "won't", "hadn't", "can't", "couldn't",
 		"mustn't", "mightn't", "needn't", "shouldn't", "oughtn't", "wouldn't",
-		"what's", "how's", "where's", "we'r",
+		"what's", "how's", "where's", "we'r", "tst",
 	}
 
 	for _, word := range stopWordsList {

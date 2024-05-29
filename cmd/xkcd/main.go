@@ -1,36 +1,24 @@
 package main
 
 import (
-	"flag"
-	"os"
-	"os/signal"
-	"syscall"
-	"yadro/internal/comics"
-	"yadro/internal/config"
+	"log"
+	"net/http"
+	http2 "yadro/internal/adapter/handler/http"
+	"yadro/internal/core/config"
+	"yadro/internal/core/update"
 )
 
 func main() {
-	var confPath, str string
-	flag.StringVar(&confPath, "c", "default", "a string var")
-	flag.StringVar(&str, "s", "default", "a string var")
-	index := flag.Bool("i", false, "a bool flag")
-	flag.Parse()
 	var c config.Conf
-	c.GetConf(confPath)
-	var fileExist bool
-	if _, err := os.Stat("database.json"); err == nil {
-		fileExist = true
-	}
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	baseURL := c.Url + "/%d/info.0.json"
-	numComics := comics.GetNumComics(baseURL)
-	comicsMap, indexMap := comics.GoToSite(numComics, baseURL, signalChan, fileExist, c.Goroutines)
-	<-signalChan
-	comics.WriteFile(c.Bd, comicsMap, indexMap)
-	if *index {
-		comics.IndexSearch(indexMap, comicsMap, str)
-	} else {
-		comics.Search(comicsMap, str)
-	}
+	c.GetConf("configs/config.yaml")
+	mux := http.NewServeMux()
+	mux.HandleFunc("/update", http2.Update)
+	mux.HandleFunc("/pics", http2.Pics)
+	mux.HandleFunc("/login", http2.Login)
+	go func() {
+		log.Printf("Starting the server on http://%s", c.Port)
+		err := http.ListenAndServe(c.Port, mux)
+		log.Fatal(err)
+	}()
+	update.UpdateEveryDay(c.Port)
 }
