@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/korovkin/limiter"
 	_ "github.com/korovkin/limiter"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -154,6 +156,42 @@ func Pics(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func Comics(w http.ResponseWriter, r *http.Request) {
+	d, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	claims := &Claims{}
+	tknStr := d.Value
+	_, err = jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (any, error) {
+		return jwtKey, nil
+	})
+	if err != nil || claims.Username == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	ctx := context.Background()
+	if !comics2.TokenBucketRateLimit(ctx, redisClient, claims.Username, refillWindow, rlimit) {
+		http.Error(w, "Request limit exceeded", http.StatusTooManyRequests)
+		return
+	}
+	if r.Method == http.MethodGet {
+		tmpl, err := template.ParseFiles("templates/comics.html")
+		if err != nil {
+			http.Error(w, "Failed to load template", http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+	line := r.FormValue("line")
+	http.Redirect(w, r, "/pics?search="+line, http.StatusSeeOther)
+}
+
 var jwtKey = []byte("my_secret_key")
 
 type Credentials struct {
@@ -166,30 +204,104 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		tmpl, err := template.ParseFiles("templates/login.html")
+		if err != nil {
+			http.Error(w, "Failed to load template", http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+	} else if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Failed to parse form", http.StatusBadRequest)
+			return
+		}
+		creds := Credentials{
+			Username: r.FormValue("username"),
+			Password: r.FormValue("password"),
+		}
+
+		token, err := authenticateWithXkcdServer(creds)
+		if err != nil {
+			http.Error(w, "Authentication failed", http.StatusUnauthorized)
+			return
+		}
+
+		expirationTime := time.Now().Add(time.Duration(tokentime) * time.Minute)
+		http.SetCookie(w, &http.Cookie{
+			Name:    "token",
+			Value:   token,
+			Expires: expirationTime,
+		})
+		http.Redirect(w, r, "/comics", http.StatusSeeOther)
+	}
+}
+
+func authenticateWithXkcdServer(creds Credentials) (string, error) {
+	url := "http://localhost:4000/xkcd-server/login"
+	jsonData, err := json.Marshal(creds)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("authentication failed: %s", resp.Status)
+	}
+
+	var result map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+
+	token, ok := result["token"]
+	if !ok {
+		return "", fmt.Errorf("token not found in response")
+	}
+
+	return token, nil
+}
+
 func Login(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
-
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	file, _ := os.Open("users.json")
-	content, _ := io.ReadAll(file)
-	var users []Credentials
-	er := json.Unmarshal(content, &users)
-	if er != nil {
+
+	file, err := os.Open("users.json")
+	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	var users []Credentials
+	if err := json.Unmarshal(content, &users); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	userMap := make(map[string]string)
 	for _, user := range users {
 		userMap[user.Username] = user.Password
 	}
 
 	expectedPassword, ok := userMap[creds.Username]
-
 	if !ok || expectedPassword != creds.Password {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -210,9 +322,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
-		Expires: expirationTime,
-	})
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
