@@ -144,15 +144,13 @@ func Pics(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	comicsMap, indexMap := repository.FetchRecords(db)
 	ans := comics2.IndexSearch(indexMap, comicsMap, line)
-	w.Header().Set("Content-Type", "application/json")
-	jsonResp, err := json.MarshalIndent(ans, "", "\t")
-	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, "<!DOCTYPE html><html><head><title>Images</title></head><body>")
+	for i := 0; i < len(ans); i++ {
+		str := "<img src='" + ans[i] + "'>"
+		fmt.Fprintf(w, str)
 	}
-	_, err = w.Write(jsonResp)
-	if err != nil {
-		return
-	}
+	fmt.Fprintf(w, "</body></html>")
 	return
 }
 
