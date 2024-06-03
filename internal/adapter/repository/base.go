@@ -41,10 +41,10 @@ func Head(db_path string, comicsMap map[int]comics.Write, indexMap map[string][]
 		log.Fatal(err)
 	}
 
-	add(db, comicsMap, indexMap)
+	Add(db, comicsMap, indexMap)
 }
 
-func add(db *sql.DB, comicsMap map[int]comics.Write, indexMap map[string][]string) {
+func Add(db *sql.DB, comicsMap map[int]comics.Write, indexMap map[string][]string) {
 	for key, value := range comicsMap {
 		records := `INSERT INTO database(id, Keywords, Url) VALUES (?, ?, ?)`
 		_, err := db.Exec(records, key, strings.Join(value.Tscript, ","), value.Img)
@@ -61,12 +61,7 @@ func add(db *sql.DB, comicsMap map[int]comics.Write, indexMap map[string][]strin
 	}
 }
 
-func FetchRecords(db_path string) (map[int]comics.Write, map[string][]int) {
-	db, err := sql.Open("sqlite3", db_path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+func FetchRecords(db *sql.DB) (map[int]comics.Write, map[string][]int) {
 	rows, err := db.Query("SELECT * FROM database")
 	if err != nil {
 		log.Fatal(err)
@@ -103,25 +98,4 @@ func FetchRecords(db_path string) (map[int]comics.Write, map[string][]int) {
 		indexMap[keyword] = values
 	}
 	return comicsMap, indexMap
-}
-
-func Down(db_path string) {
-	db, err := sql.Open("sqlite3", db_path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	driver, err := sqlite.WithInstance(db, &sqlite.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://internal/adapter/repository/migrations",
-		"sqlite3", driver)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal(err)
-	}
 }

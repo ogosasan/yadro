@@ -12,7 +12,9 @@ import (
 
 type GistRequest struct {
 	Tscript string `json:"transcript"`
+	Alt     string `json:"alt"`
 	Img     string `json:"img"`
+	Title   string `json:"title"`
 }
 
 type Write struct {
@@ -84,7 +86,7 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 				fmt.Println(err)
 				continue
 			}
-			printInFile := Write{Tscript: normalization(xkcd.Tscript), Img: xkcd.Img}
+			printInFile := Write{Tscript: Normalization(xkcd.Tscript + xkcd.Alt + xkcd.Title), Img: xkcd.Img}
 			results <- printInFile
 			response.Body.Close()
 		}
@@ -123,34 +125,4 @@ func GoToSite(numComics int, baseURL string, done chan os.Signal, fileExist bool
 		}
 	}
 	return comicsMap, indexMap, len(existComics)
-}
-
-func WriteFile(file string, comicsMap map[int]Write, indexMap map[string][]int) {
-	f, err := os.Create(file)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "\t")
-	err = encoder.Encode(comicsMap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	index, err := os.Create("index.json")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer index.Close()
-	encode := json.NewEncoder(index)
-	encode.SetIndent("", "\t")
-	err = encode.Encode(indexMap)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
 }
