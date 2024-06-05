@@ -1,9 +1,9 @@
 
 build:
-	go build -o xkcd-server yadro/cmd/xkcd/
+	go build -o web-server yadro/cmd/xkcd/
 
 run:
-	xkcd-server
+	web-server
 
 .PHONY: lint
 lint:
