@@ -24,9 +24,11 @@ func UpdateEveryDay(port string) {
 			if err != nil {
 				log.Fatalf("Request execution error: %v", err)
 			}
-			defer resp.Body.Close()
-
-			log.Println("The request was completed successfully")
+			func() {
+				defer resp.Body.Close()
+				log.Println("The request was completed successfully")
+				// Дополнительная обработка ответа, если необходимо
+			}()
 		}
 	}
 }
